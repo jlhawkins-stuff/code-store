@@ -1,3 +1,68 @@
+//add this to the EventMob
+	public float getRatioOfMaxHp(){
+		return currentHp / maxHp;
+	}
+	
+	public float getHitRatioOfMaxHp(){
+		return lastHit / maxHp;
+	}
+	
+	private static double getBarSize(){
+		return 25;
+	}
+	
+	private static double getRightX(){
+		return ((getBarSize() * mob.getRatioOfMaxHp) * 2.0F) - getBarSize();
+	}
+	
+	private static double getLastRightX(){
+		return (((getBarSize() * mob.getHitRatioOfMaxHp) * 2.0F) - getBarSize()) - getRightX();
+	}
+	
+	private static double getLeftX(){
+		return -getBarSize();
+	}
+	
+	private static double getHitLeftX(){
+		return getRightX();
+	}
+	
+	private static double getTopY(){
+		return 0;
+	}
+	
+	private static double getBottomY(){
+		return 4;
+	}
+	
+	private static double getZeroZ(){
+		return 0;
+	}
+	
+	private static void drawMobBar(double leftX, double rightX, double topY, double bottomY, double z){
+		tessellator.startDrawingQuads();
+		tessellator.setColorRGBA(red, green, blue, alpha);
+		tessellator.addVertex(leftX, topY, z);
+		tessellator.addVertex(leftX, bottomY, z);
+		tessellator.addVertex(rightX, topY, z);
+		tessellator.addVertex(rightX, bottomY, z);
+		tessellator.draw();
+	}
+	
+	private static void drawCurrentHealthBar(){
+		drawMobBar(getLeftX(),getRightX(),getTopY(),getBottomY(),getZeroZ());
+	}
+	
+	private static void drawLastHitBar(){
+		drawMobBar(getHitLeftX(),getLastRightX(),getTopY(),getBottomY(),getZeroZ());
+	}
+	
+	private static void drawLastHealthBar(){
+		drawMobBar(getLeftX(),getLastRightX(),getTopY(),getBottomY(),getZeroZ());
+	}
+
+
+
 package hawk.modbuilduptest03.healthbar;
 
 import java.awt.Color;
@@ -155,6 +220,21 @@ public class WorldRenderEvent {
 		tessellator.addVertex(-25.0D, 4.0D, 0.0D);
 		tessellator.addVertex(25.0D, 4.0D, 0.0D);
 		tessellator.addVertex(25.0D, 0.0D, 0.0D);
+		tessellator.draw();
+	}
+	
+	private static void drawCurrentHealthBar(){
+		//this is the health on top of it's background
+		tessellator.startDrawingQuads();
+		tessellator.setColorRGBA(red, green, blue, alpha);
+		//-25 is the left edge
+		//the first value is the X value
+		//leftX should be a negative constant int
+		//the rightX needs to be greater then the leftX
+		tessellator.addVertex(-25.0D, 0.0D, 0.0D);
+		tessellator.addVertex(-25.0D, 4.0D, 0.0D);
+		tessellator.addVertex(healthSize * 2.0F - 25.0D, 4.0D, 0.0D);
+		tessellator.addVertex(healthSize * 2.0F - 25.0D, 0.0D, 0.0D);
 		tessellator.draw();
 	}
 	
