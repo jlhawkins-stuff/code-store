@@ -1,0 +1,640 @@
+package hawk.modbuilduptest03.healthbar;
+
+import java.awt.Color;
+import java.util.Set;
+
+import org.lwjgl.opengl.GL11;
+
+import cpw.mods.fml.relauncher.ReflectionHelper;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.WorldClient;
+import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.client.renderer.culling.Frustrum;
+import net.minecraft.client.renderer.entity.RenderItem;
+import net.minecraft.client.renderer.entity.RenderManager;
+import net.minecraft.client.renderer.texture.TextureMap;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityList;
+import net.minecraft.entity.EntityLiving;
+import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.EnumCreatureAttribute;
+import net.minecraft.entity.boss.IBossDisplayData;
+import net.minecraft.entity.monster.IMob;
+import net.minecraft.init.Items;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumChatFormatting;
+import net.minecraft.util.StatCollector;
+import net.minecraft.util.Vec3;
+
+public class WorldRenderEvent {
+	
+	//private static Logger log = LogManager.getLogger();
+
+	public static int maxDistance = 24;
+	public static boolean renderInF1 = false;
+	public static double heightAbove = 0.6D;
+	public static boolean drawBackground = true;
+	public static int backgroundPadding = 2;
+	public static int backgroundHeight = 6;
+	//public int barHeight = 4;
+	public static int plateSize = 25;
+	public static int plateSizeBoss = 50;
+	public static boolean showAttributes = true;
+	public static boolean showArmor = true;
+	public static boolean groupArmor = true;
+	public static boolean colorByType = false;
+	public static int hpTextHeight = 14;
+	public static boolean showMaxHP = true;
+	public static boolean showCurrentHP = true;
+	public static boolean showPercentage = true;
+	public static boolean showOnPlayers = true;
+	public static boolean showOnBosses = true;
+	
+	private static float partialTicks;
+
+	private static double viewX;
+	private static double viewY;
+	private static double viewZ;
+	
+	
+	private static EntityLivingBase cameraEntity;
+	private static Vec3 renderingVector;
+	
+	public synchronized static void processWorldRenderEvents(float partialTicks){
+		
+	}
+	
+	private static void setCameraViewCoordinates(){
+		cameraEntity = Minecraft.getMinecraft().renderViewEntity;
+		renderingVector = cameraEntity.getPosition(partialTicks);
+		viewX = cameraEntity.lastTickPosX + (cameraEntity.posX - cameraEntity.lastTickPosX) * partialTicks;
+		viewY = cameraEntity.lastTickPosY + (cameraEntity.posY - cameraEntity.lastTickPosY) * partialTicks;
+		viewZ = cameraEntity.lastTickPosZ + (cameraEntity.posZ - cameraEntity.lastTickPosZ) * partialTicks;
+	}
+	
+	private static Frustrum getFrustrum(){
+		Frustrum frustrum = new Frustrum();
+		frustrum.setPosition(viewX, viewY, viewZ);
+		return frustrum;
+	}
+	
+	private static boolean isInRangeToRender3d(){
+		return entity.isInRangeToRender3d(renderingVector.xCoord, renderingVector.yCoord,renderingVector.zCoord);
+		
+	}
+	
+	@SuppressWarnings("unchecked")
+	private static Set<Entity> getWorldEntitiesList(){
+		return (Set<Entity>) ReflectionHelper.getPrivateValue(WorldClient.class,Minecraft.getMinecraft().theWorld,new String[] {"entityList","field_73032_d","J" });
+	}
+
+	public static void renderEvent(float partialTicks) {
+		WorldRenderEvent.partialTicks = partialTicks;
+		setCameraViewCoordinates();
+
+		//Minecraft mc = Minecraft.getMinecraft();
+		
+		/*EntityLivingBase cameraEntity = Minecraft.getMinecraft().renderViewEntity;
+		double viewX = cameraEntity.lastTickPosX + (cameraEntity.posX - cameraEntity.lastTickPosX) * partialTicks;
+		double viewY = cameraEntity.lastTickPosY + (cameraEntity.posY - cameraEntity.lastTickPosY) * partialTicks;
+		double viewZ = cameraEntity.lastTickPosZ + (cameraEntity.posZ - cameraEntity.lastTickPosZ) * partialTicks;*/
+		//Frustrum frustrum = new Frustrum();
+		//frustrum.setPosition(viewX, viewY, viewZ);
+
+		//Vec3 renderingVector = cameraEntity.getPosition(partialTicks);
+
+		//Set<Entity> entities = (Set<Entity>) ReflectionHelper.getPrivateValue(WorldClient.class,Minecraft.getMinecraft().theWorld,new String[] {"entityList","field_73032_d","J" });
+		
+		for (Entity entity : getWorldEntitiesList()){
+			if (
+					(entity != null) 
+					&& ((entity instanceof EntityLiving))
+					&& (isInRangeToRender3d())
+					&& ((entity.ignoreFrustumCheck) || (getFrustrum().isBoundingBoxInFrustum(entity.boundingBox)))
+					&& (entity.isEntityAlive())) {
+
+				WorldRenderEvent.entity = (EntityLiving)entity;
+				//renderHealthBar2((EntityLiving)entity, partialTicks, cameraEntity);
+				renderHealthBar2();
+			}
+		}
+	}
+	
+	private static EntityLivingBase entity;
+	
+	private static float entityX;
+	private static float entityY;
+	private static float entityZ;
+	
+	private static void getEntityCoordinates(){
+		entityX = (float) ((entity.lastTickPosX + (entity.posX - entity.lastTickPosX) * partialTicks) - RenderManager.renderPosX);
+		entityY = (float) ((entity.lastTickPosY + (entity.posY - entity.lastTickPosY) * partialTicks) - RenderManager.renderPosY + entity.height + heightAbove);
+		entityZ = (float) ((entity.lastTickPosZ + (entity.posZ - entity.lastTickPosZ) * partialTicks) - RenderManager.renderPosZ);
+	}
+	
+
+	private static Tessellator tessellator = Tessellator.instance;
+	
+	private static void drawBackground(){
+		//this is the background that floats above mobs head
+		tessellator.startDrawingQuads();
+		tessellator.setColorRGBA(255, 255, 255, 64);
+		//values are X, Y, Z
+		tessellator.addVertex(-27.0D, -6.0D, 0.0D);
+		tessellator.addVertex(-27.0D, 6.0D, 0.0D);
+		tessellator.addVertex(27.0D, 6.0D, 0.0D);
+		tessellator.addVertex(27.0D, -6.0D, 0.0D);
+		tessellator.draw();
+	}
+	
+	private static void drawHealthBarBackground(){
+		//this is the background for the health bar
+		tessellator.startDrawingQuads();
+		tessellator.setColorRGBA(127, 127, 127, 127);
+		tessellator.addVertex(-25.0D, 0.0D, 0.0D);
+		tessellator.addVertex(-25.0D, 4.0D, 0.0D);
+		tessellator.addVertex(25.0D, 4.0D, 0.0D);
+		tessellator.addVertex(25.0D, 0.0D, 0.0D);
+		tessellator.draw();
+	}
+	
+	private static void renderHealthBar2(){
+	//private static void renderHealthBar2(EntityLivingBase entity, float partialTicks, Entity viewPoint){
+		getEntityCoordinates();
+		//log.debug(ThreadManager.getCurrentThread() + " Start of HealthBar Render.");
+
+		/*double entityX = entity.lastTickPosX + (entity.posX - entity.lastTickPosX) * partialTicks;
+		double entityY = entity.lastTickPosY + (entity.posY - entity.lastTickPosY) * partialTicks;
+		double entityZ = entity.lastTickPosZ + (entity.posZ - entity.lastTickPosZ) * partialTicks;*/
+		
+		//starts a matrix
+		GL11.glPushMatrix();
+		//values are x,y,z  moves matrix on a vector
+		GL11.glTranslatef(entityX, entityY, entityZ);
+				/*(float) (entityX - RenderManager.renderPosX),
+				(float) (entityY - RenderManager.renderPosY + entity.height + heightAbove),
+				(float) (entityZ - RenderManager.renderPosZ));*/
+		//RGB color of matrix
+		GL11.glNormal3f(0.0F, 1.0F, 0.0F);
+		//rotates matrix, rotational degrees, x, y, z
+		GL11.glRotatef(-RenderManager.instance.playerViewY, 0.0F, 1.0F, 0.0F);
+		GL11.glRotatef(RenderManager.instance.playerViewX, 1.0F, 0.0F, 0.0F);
+		//scales the matrix
+		float scale1 = 0.026666673F;
+		GL11.glScalef(-scale1, -scale1, scale1);
+		
+		//GL_LIGHTING = 0xB50,
+		// Render something here ignoring lighting
+		GL11.glDisable(2896);
+		
+		GL11.glDepthMask(false);
+		
+		//GL_DEPTH_TEST = 0xB71,
+		// Render something here ignoring depth
+		GL11.glDisable(2929);
+		
+		//GL_TEXTURE_2D = 0xDE1,
+		// Render something here without a texture
+		GL11.glDisable(3553);
+
+		//GL_BLEND = 0xBE2,
+		// Render something here with transparency enabled
+		GL11.glEnable(3042);
+		GL11.glBlendFunc(770, 771);
+		
+		Tessellator tessellator = Tessellator.instance;
+
+		float pastTranslate = 0.0F;
+		//Moves it by pastTranslate in the Y axis
+		GL11.glTranslatef(0.0F, pastTranslate, 0.0F);
+
+		//float size = 25;
+		//float padding = 2;
+		//int backgroundHeight = 6;
+		//int barHeight = 4;
+		
+		/*//this is the background that floats above mobs head
+		tessellator.startDrawingQuads();
+		tessellator.setColorRGBA(255, 255, 255, 64);
+		//values are X, Y, Z
+		tessellator.addVertex(-size - padding, -backgroundHeight, 0.0D);
+		tessellator.addVertex(-size - padding, barHeight + padding, 0.0D);
+		tessellator.addVertex(size + padding, barHeight + padding, 0.0D);
+		tessellator.addVertex(size + padding, -backgroundHeight, 0.0D);
+		tessellator.draw();*/
+		
+		/*//this is the background that floats above mobs head
+		tessellator.startDrawingQuads();
+		tessellator.setColorRGBA(255, 255, 255, 64);
+		//values are X, Y, Z
+		tessellator.addVertex(-27.0D, -6.0D, 0.0D);
+		tessellator.addVertex(-27.0D, 6.0D, 0.0D);
+		tessellator.addVertex(27.0D, 6.0D, 0.0D);
+		tessellator.addVertex(27.0D, -6.0D, 0.0D);
+		tessellator.draw();*/
+		
+		drawBackground();
+		drawHealthBarBackground();
+
+		
+
+		float maxHealth = entity.getMaxHealth();
+		float health = Math.min(maxHealth, entity.getHealth());
+		float healthSize = 25 * (health / maxHealth);
+		
+		int red = 0;
+		int green = 255;
+		int blue = 0;
+		int alpha = 127;
+		
+		//this is the health on top of it's background
+		tessellator.startDrawingQuads();
+		tessellator.setColorRGBA(red, green, blue, alpha);
+		tessellator.addVertex(-25.0D, 0.0D, 0.0D);
+		tessellator.addVertex(-25.0D, 4.0D, 0.0D);
+		tessellator.addVertex(healthSize * 2.0F - 25.0D, 4.0D, 0.0D);
+		tessellator.addVertex(healthSize * 2.0F - 25.0D, 0.0D, 0.0D);
+		tessellator.draw();//GL_TEXTURE_2D = 0xDE1,
+		
+		GL11.glEnable(3553);
+
+		float scale4 = 0.5F;
+		
+		//create a new matrix
+		GL11.glPushMatrix();
+		//move
+		GL11.glTranslatef(-25.0F, -4.5F, 0.0F);
+		
+		float scale2 = 0.5F;
+		//scale
+		GL11.glScalef(scale2, scale2, scale2);
+
+		//mc.fontRenderer.drawString(name, 0, 0, 16777215);
+		
+		//create a new matrix
+		GL11.glPushMatrix();
+		
+		float scale3 = 0.75F;
+		//scale
+		GL11.glScalef(scale3, scale3, scale3);
+		
+		//end drawing and revert
+		GL11.glPopMatrix();
+		
+		// RGB and transparency 
+		GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+		//scales the size by the scale value x,y,z
+		GL11.glScalef(scale4, scale4, scale4);
+		//values are x,y,z  this code moves on the x.
+		GL11.glTranslatef(25.0F / (scale2 * scale4) * 2.0F - 16.0F, 0.0F, 0.0F);
+
+
+		//end drawing
+		GL11.glPopMatrix();
+
+		//GL_DEPTH_TEST = 0xB71,
+		// Render something here ignoring depth
+		GL11.glEnable(2929);
+		
+		GL11.glDepthMask(true);
+		//GL_LIGHTING = 0xB50,
+		// Render something here ignoring lighting
+		GL11.glEnable(2896);
+		
+		GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+		//end drawing and revert
+		GL11.glPopMatrix();
+
+		//float size = 25;
+		//float padding = 2;
+		//int backgroundHeight = 6;
+		//int barHeight = 4;
+		
+		pastTranslate = -(12);
+		
+		//GL11.glPopMatrix();
+		
+		//log.debug(ThreadManager.getCurrentThread() + " End of HealthBar Render.");
+		
+	}
+
+	public static void renderHealthBar(EntityLivingBase passedEntity, float partialTicks, Entity viewPoint) {
+
+		Minecraft mc = Minecraft.getMinecraft();
+		EntityLivingBase entity = passedEntity;
+		int armor = entity.getTotalArmorValue();
+		float maxHealth = entity.getMaxHealth();
+		float distance = entity.getDistanceToEntity(viewPoint);
+		
+		float health = Math.min(maxHealth, entity.getHealth());
+		float percent = (int) (health / maxHealth * 100.0F);
+		
+		float padding = backgroundPadding;
+		int bgHeight = backgroundHeight;
+		int barHeight = 4;
+		float size = plateSize;
+		int h = hpTextHeight;
+
+		float healthSize = size * (health / maxHealth);
+		
+		int r = 0;
+		int g = 255;
+		int b = 0;
+		
+		int off = 0;
+
+		float pastTranslate = 0.0F;
+		float scale1 = 0.026666673F;
+		float scale2 = 0.5F;
+		float scale3 = 0.75F;
+		float scale4 = 0.5F;
+
+		boolean useHue = !colorByType;
+
+		double x = passedEntity.lastTickPosX + (passedEntity.posX - passedEntity.lastTickPosX) * partialTicks;
+		double y = passedEntity.lastTickPosY + (passedEntity.posY - passedEntity.lastTickPosY) * partialTicks;
+		double z = passedEntity.lastTickPosZ + (passedEntity.posZ - passedEntity.lastTickPosZ) * partialTicks;
+
+		ItemStack stack = null;
+		
+		String name = StatCollector.translateToLocal("entity." + EntityList.getEntityString(entity) + ".name");
+
+		float namel = mc.fontRenderer.getStringWidth(name) * scale2;
+		
+		String maxHpStr = EnumChatFormatting.BOLD + "" + Math.round(maxHealth * 100.0D) / 100.0D;
+		String hpStr = "" + Math.round(health * 100.0D) / 100.0D;
+		String percStr = (int) percent + "%";
+		
+		if (passedEntity.riddenByEntity != null) {
+			return;
+		}
+
+		while ((entity.ridingEntity != null) && ((entity.ridingEntity instanceof EntityLivingBase))) {
+			entity = (EntityLivingBase) entity.ridingEntity;
+		}
+
+		while (entity != null) {
+			
+			if (	(distance <= maxDistance) 
+					&& (passedEntity.canEntityBeSeen(viewPoint)) 
+					&& (!entity.isInvisible())
+					&& (maxHealth > 0.0F)) { //all the way to the bottom
+				
+				/*
+				 * 
+GL11.glColor4f(1F, 0F, 0F, 0.5F); // Pure red, 50% transparency
+GL11.glColor3f(0F, 1F, 0F); // Pure green
+GL11.glColor3f(0F, 0F, 1F); // Pure blue
+
+GL11.glScalef(0.5F, 0.5F, 0.5F); // Half the scale
+GL11.glScalef(2F, 2F, 2F); // Double the scale
+
+GL11.glTranslatef(1F, 0F, 0F); // Moves it by 1 in the X axis
+GL11.glTranslatef(0F, 1F, 0F); // Moves it by 1 in the Y axis
+GL11.glTranslatef(0F, 0F, 1F); // Moves it by 1 in the Z axis
+
+GL11.glRotatef(90F, 1F, 0F, 0F); // Rotates by 90º
+				 */
+
+				//starts a matrix
+				GL11.glPushMatrix();
+				//values are x,y,z  moves matrix on a vector
+				GL11.glTranslatef(
+						(float) (x - RenderManager.renderPosX),
+						(float) (y - RenderManager.renderPosY + passedEntity.height + heightAbove),
+						(float) (z - RenderManager.renderPosZ));
+				//RGB color of matrix
+				GL11.glNormal3f(0.0F, 1.0F, 0.0F);
+				//rotates matrix, rotational degrees, x, y, z
+				GL11.glRotatef(-RenderManager.instance.playerViewY, 0.0F, 1.0F, 0.0F);
+				GL11.glRotatef(RenderManager.instance.playerViewX, 1.0F, 0.0F, 0.0F);
+				//scales the matrix
+				GL11.glScalef(-scale1, -scale1, scale1);
+				
+				//GL_LIGHTING = 0xB50,
+				// Render something here ignoring lighting
+				GL11.glDisable(2896);
+				
+				GL11.glDepthMask(false);
+				
+				//GL_DEPTH_TEST = 0xB71,
+				// Render something here ignoring depth
+				GL11.glDisable(2929);
+				
+				//GL_TEXTURE_2D = 0xDE1,
+				// Render something here without a texture
+				GL11.glDisable(3553);
+
+				//GL_BLEND = 0xBE2,
+				// Render something here with transparency enabled
+				GL11.glEnable(3042);
+				GL11.glBlendFunc(770, 771);
+
+				Tessellator tessellator = Tessellator.instance;
+
+				if ((entity instanceof IMob)) {
+					r = 255;
+					g = 0;
+
+					EnumCreatureAttribute attr = entity.getCreatureAttribute();
+
+					switch (attr) {
+					case ARTHROPOD:
+						stack = new ItemStack(Items.spider_eye);
+						break;
+					case UNDEAD:
+						stack = new ItemStack(Items.rotten_flesh);
+						break;
+					default:
+						stack = new ItemStack(Items.skull, 1, 4);
+					}
+				}
+
+				if ((entity instanceof IBossDisplayData)) {
+					stack = new ItemStack(Items.skull);
+					size = plateSizeBoss;
+					r = 128;
+					g = 0;
+					b = 128;
+				}
+				
+				if (useHue) {
+					float hue = Math.max(0.0F, health / maxHealth / 3.0F - 0.07F);
+					Color color = Color.getHSBColor(hue, 1.0F, 1.0F);
+					r = color.getRed();
+					g = color.getGreen();
+					b = color.getBlue();
+				}
+				//Moves it by pastTranslate in the Y axis
+				GL11.glTranslatef(0.0F, pastTranslate, 0.0F);
+
+				if (((entity instanceof EntityLiving)) && (((EntityLiving) entity).hasCustomNameTag())){
+					name = EnumChatFormatting.ITALIC + ((EntityLiving) entity).getCustomNameTag();
+				}
+
+				if (namel + 20.0F > size * 2.0F){
+					size = namel / 2.0F + 10.0F;
+				}
+
+				if (drawBackground) {
+					tessellator.startDrawingQuads();
+					tessellator.setColorRGBA(0, 0, 0, 64);
+					tessellator.addVertex(-size - padding, -bgHeight, 0.0D);
+					tessellator.addVertex(-size - padding, barHeight + padding, 0.0D);
+					tessellator.addVertex(size + padding, barHeight + padding, 0.0D);
+					tessellator.addVertex(size + padding, -bgHeight, 0.0D);
+					tessellator.draw();
+				}
+
+				tessellator.startDrawingQuads();
+				tessellator.setColorRGBA(127, 127, 127, 127);
+				tessellator.addVertex(-size, 0.0D, 0.0D);
+				tessellator.addVertex(-size, barHeight, 0.0D);
+				tessellator.addVertex(size, barHeight, 0.0D);
+				tessellator.addVertex(size, 0.0D, 0.0D);
+				tessellator.draw();
+
+				tessellator.startDrawingQuads();
+				tessellator.setColorRGBA(r, g, b, 127);
+				tessellator.addVertex(-size, 0.0D, 0.0D);
+				tessellator.addVertex(-size, barHeight, 0.0D);
+				tessellator.addVertex(healthSize * 2.0F - size, barHeight, 0.0D);
+				tessellator.addVertex(healthSize * 2.0F - size, 0.0D, 0.0D);
+				tessellator.draw();
+
+				//GL_TEXTURE_2D = 0xDE1,
+				GL11.glEnable(3553);
+
+				//create a new matrix
+				GL11.glPushMatrix();
+				//move
+				GL11.glTranslatef(-size, -4.5F, 0.0F);
+				//scale
+				GL11.glScalef(scale2, scale2, scale2);
+
+				mc.fontRenderer.drawString(name, 0, 0, 16777215);
+				//create a new matrix
+				GL11.glPushMatrix();
+				//scale
+				GL11.glScalef(scale3, scale3, scale3);
+
+				if (maxHpStr.endsWith(".0")){
+					maxHpStr = maxHpStr.substring(0, maxHpStr.length() - 2);
+				}
+
+				if (hpStr.endsWith(".0")) {
+					hpStr = hpStr.substring(0, hpStr.length() - 2);
+				}
+
+				if (showCurrentHP){
+					mc.fontRenderer.drawString(
+							hpStr, 
+							2, 
+							h, 
+							16777215);
+				}
+
+				if (showMaxHP){
+					mc.fontRenderer.drawString(
+							maxHpStr,
+							(int) (size / (scale2 * scale3) * 2.0F) - 2 - mc.fontRenderer.getStringWidth(maxHpStr), 
+							h,
+							16777215);
+				}
+
+				if (showPercentage){
+					mc.fontRenderer.drawString(
+							percStr,
+							(int) (size / (scale2 * scale3)) - mc.fontRenderer.getStringWidth(percStr) / 2, 
+							h, 
+							-1);
+				}
+				//end drawing and revert
+				GL11.glPopMatrix();
+				// RGB and transparency 
+				GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+				//scales the size by the scale value x,y,z
+				GL11.glScalef(scale4, scale4, scale4);
+				//values are x,y,z  this code moves on the x.
+				GL11.glTranslatef(size / (scale2 * scale4) * 2.0F - 16.0F, 0.0F, 0.0F);
+
+				mc.renderEngine.bindTexture(TextureMap.locationItemsTexture);
+
+				if ((stack != null) && (showAttributes)) {
+
+					RenderItem.getInstance().renderIcon(
+							off, 
+							0, 
+							stack.getIconIndex(), 
+							16, 
+							16);
+
+					off -= 16;
+				}
+
+				if ((armor > 0) && (showArmor)) {
+					int ironArmor = armor % 5;
+					int diamondArmor = armor / 5;
+
+					if (!groupArmor) {
+						ironArmor = armor;
+						diamondArmor = 0;
+					}
+
+					stack = new ItemStack(Items.iron_chestplate);
+
+					for (int i = 0; i < ironArmor; i++) {
+
+						RenderItem.getInstance().renderIcon(
+								off, 
+								0, 
+								stack.getIconIndex(), 
+								16, 
+								16);
+
+						off -= 4;
+					}
+
+					stack = new ItemStack(Items.diamond_chestplate);
+					for (int i = 0; i < diamondArmor; i++) {
+
+						RenderItem.getInstance().renderIcon(
+								off, 
+								0, 
+								stack.getIconIndex(), 
+								16, 
+								16);
+
+						off -= 4;
+					}
+				}
+
+				//end drawing
+				GL11.glPopMatrix();
+
+				//GL_DEPTH_TEST = 0xB71,
+				// Render something here ignoring depth
+				GL11.glEnable(2929);
+				
+				GL11.glDepthMask(true);
+				//GL_LIGHTING = 0xB50,
+				// Render something here ignoring lighting
+				GL11.glEnable(2896);
+				
+				GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+				//end drawing and revert
+				GL11.glPopMatrix();
+
+				pastTranslate = -(bgHeight + barHeight + padding);
+				
+			}
+
+			Entity riddenBy = entity.riddenByEntity;
+			if ((riddenBy instanceof EntityLivingBase)) {
+				entity = (EntityLivingBase) riddenBy;
+			} else {
+				return;
+			}
+		}
+	}
+}
