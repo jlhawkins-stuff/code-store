@@ -1,3 +1,5 @@
+https://www.agiledeveloper.com/articles/cloning072002.htm
+
 package ninja.genuine.battle;
 
 import java.io.BufferedReader;
